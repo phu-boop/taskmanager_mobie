@@ -1,28 +1,44 @@
 package com.example.taskmanager.viewmodel
 
-
 import androidx.lifecycle.ViewModel
 import com.example.taskmanager.model.Task
+import com.example.taskmanager.model.TaskStatus
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 class TaskViewModel : ViewModel() {
-    private val _taskList = mutableListOf<Task>()
-    val taskList: List<Task> get() = _taskList
+
+    private val _tasks = MutableStateFlow<List<Task>>(emptyList())
+    val tasks: StateFlow<List<Task>> = _tasks
 
     fun addTask(task: Task) {
-        _taskList.add(task.copy(id = _taskList.size + 1))
+        val currentTasks = _tasks.value.toMutableList()
+        currentTasks.add(task.copy(id = currentTasks.size + 1))
+        _tasks.value = currentTasks
     }
 
-    fun markTaskAsDone(taskIndex: Int) {
-        if (taskIndex in _taskList.indices) {
-            _taskList[taskIndex] = _taskList[taskIndex].copy(status = "done")
+    fun markTaskAsDone(task: Task) {
+        val currentTasks = _tasks.value.toMutableList()
+        val index = currentTasks.indexOfFirst { it.id == task.id }
+        if (index != -1) {
+            currentTasks[index] = currentTasks[index].copy(status = TaskStatus.COMPLETED)
+            _tasks.value = currentTasks
         }
     }
 
-    fun deleteTask(taskIndex: Int) {
-        if (taskIndex in _taskList.indices) {
-            _taskList.removeAt(taskIndex)
+    fun deleteTask(task: Task) {
+        val currentTasks = _tasks.value.toMutableList()
+        currentTasks.removeAll { it.id == task.id }
+        _tasks.value = currentTasks
+    }
+
+    fun markTaskAsInProgress(task: Task) {
+        val currentTasks = _tasks.value.toMutableList()
+        val index = currentTasks.indexOfFirst { it.id == task.id }
+        if (index != -1) {
+            currentTasks[index] = currentTasks[index].copy(status = TaskStatus.IN_PROGRESS)
+            _tasks.value = currentTasks
         }
     }
 
-    fun getTaskCount(): Int = _taskList.size
 }

@@ -11,6 +11,7 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
@@ -19,5 +20,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "TaskManager"
+rootProject.name = "Task Manager"
 include(":app")
