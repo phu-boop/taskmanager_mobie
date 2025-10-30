@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Task Manager</string>
 
+    <!-- Bộ lọc (Filter) -->
     <string-array name="filter_options">
         <item>All Tasks</item>
         <item>Pending</item>
@@ -8,12 +9,16 @@
         <item>Completed</item>
     </string-array>
 
+    <string name="filter_prompt">Filter tasks</string>
+
+    <!-- Mức độ ưu tiên -->
     <string-array name="priority_options">
         <item>Low</item>
         <item>Medium</item>
         <item>High</item>
     </string-array>
 
+    <!-- Phân loại công việc -->
     <string-array name="category_options">
         <item>Work</item>
         <item>Personal</item>

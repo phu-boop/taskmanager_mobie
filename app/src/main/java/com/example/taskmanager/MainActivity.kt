@@ -3,9 +3,13 @@ package com.example.taskmanager
 import android.app.AlertDialog
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import com.example.taskmanager.adapter.TaskAdapter
 import com.example.taskmanager.databinding.ActivityMainBinding
 import com.example.taskmanager.model.Task
@@ -15,7 +19,7 @@ import com.example.taskmanager.viewmodel.TaskViewModel
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private val viewModel = TaskViewModel() // Tạo trực tiếp
+    private val viewModel = TaskViewModel()
     private lateinit var adapter: TaskAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,7 +33,17 @@ class MainActivity : AppCompatActivity() {
     private fun setupUI() {
         setupRecyclerView()
         setupClickListeners()
-        updateUI()
+        setupObservers()
+    }
+
+    private fun updateUI(tasks: List<Task>) {
+        if (tasks.isEmpty()) {
+            binding.rvTasks.visibility = View.GONE
+            binding.tvEmpty.visibility = View.VISIBLE
+        } else {
+            binding.rvTasks.visibility = View.VISIBLE
+            binding.tvEmpty.visibility = View.GONE
+        }
     }
 
     private fun setupRecyclerView() {
@@ -39,11 +53,9 @@ class MainActivity : AppCompatActivity() {
             },
             onMarkDone = { task ->
                 viewModel.markTaskAsDone(task)
-                updateUI()
             },
             onMarkInProgress = { task ->
                 viewModel.markTaskAsInProgress(task)
-                updateUI()
             },
             onDelete = { task ->
                 showDeleteConfirmation(task)
@@ -54,10 +66,35 @@ class MainActivity : AppCompatActivity() {
         binding.rvTasks.adapter = adapter
     }
 
+    private fun setupObservers() {
+        lifecycleScope.launch {
+            viewModel.filteredTasks.collectLatest { tasks ->
+                adapter.submitList(tasks)
+                updateUI(tasks)
+            }
+        }
+    }
 
     private fun setupClickListeners() {
         binding.fabAddTask.setOnClickListener {
             showAddTaskDialog()
+        }
+
+        binding.spinnerFilter.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                val selectedFilter = when (position) {
+                    0 -> null
+                    1 -> TaskStatus.PENDING
+                    2 -> TaskStatus.IN_PROGRESS
+                    3 -> TaskStatus.COMPLETED
+                    else -> null
+                }
+                viewModel.setFilter(selectedFilter)
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>) {
+                viewModel.setFilter(null)
+            }
         }
     }
 
@@ -70,6 +107,7 @@ class MainActivity : AppCompatActivity() {
 
         val dialog = AlertDialog.Builder(this)
             .setView(dialogView)
+            .setTitle("Add New Task")
             .create()
 
         btnSave.setOnClickListener {
@@ -79,7 +117,6 @@ class MainActivity : AppCompatActivity() {
             if (title.isNotEmpty()) {
                 val newTask = Task(title = title, description = description)
                 viewModel.addTask(newTask)
-                updateUI()
                 dialog.dismiss()
             } else {
                 etTitle.error = "Title is required"
@@ -93,7 +130,6 @@ class MainActivity : AppCompatActivity() {
         dialog.show()
     }
 
-    // THÊM HÀM NÀY - showEditTaskDialog
     private fun showEditTaskDialog(task: Task) {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_add_task, null)
         val etTitle = dialogView.findViewById<EditText>(R.id.etTitle)
@@ -101,12 +137,12 @@ class MainActivity : AppCompatActivity() {
         val btnSave = dialogView.findViewById<Button>(R.id.btnSave)
         val btnCancel = dialogView.findViewById<Button>(R.id.btnCancel)
 
-        // Điền thông tin task hiện tại
         etTitle.setText(task.title)
         etDescription.setText(task.description)
 
         val dialog = AlertDialog.Builder(this)
             .setView(dialogView)
+            .setTitle("Edit Task")
             .create()
 
         btnSave.setOnClickListener {
@@ -115,8 +151,7 @@ class MainActivity : AppCompatActivity() {
 
             if (newTitle.isNotEmpty()) {
                 val updatedTask = task.copy(title = newTitle, description = newDescription)
-                // Cần thêm hàm updateTask trong ViewModel
-                updateUI()
+                viewModel.updateTask(updatedTask)
                 dialog.dismiss()
             } else {
                 etTitle.error = "Title is required"
@@ -136,22 +171,8 @@ class MainActivity : AppCompatActivity() {
             .setMessage("Are you sure you want to delete '${task.title}'?")
             .setPositiveButton("Delete") { _, _ ->
                 viewModel.deleteTask(task)
-                updateUI()
             }
             .setNegativeButton("Cancel", null)
             .show()
-    }
-
-    private fun updateUI() {
-        val tasks = viewModel.tasks.value
-        adapter.submitList(tasks)
-
-        if (tasks.isEmpty()) {
-            binding.rvTasks.visibility = android.view.View.GONE
-            binding.tvEmpty.visibility = android.view.View.VISIBLE
-        } else {
-            binding.rvTasks.visibility = android.view.View.VISIBLE
-            binding.tvEmpty.visibility = android.view.View.GONE
-        }
     }
 }
